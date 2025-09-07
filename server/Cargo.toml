@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 rocket = { version = "0.5.1", features = ["serde_json"] }
+sqlx = { version = "0.8.6", features = ["chrono", "postgres", "runtime-tokio-rustls", "uuid"] }
