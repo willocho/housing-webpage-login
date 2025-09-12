@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+argon2 = { version = "0.5.3", features = ["std"] }
 dotenv = "0.15.0"
 rocket = { version = "0.5.1", features = ["json", "serde_json"] }
 rocket_db_pools = { version = "0.2.0", features = ["sqlx_macros", "sqlx_postgres"] }
