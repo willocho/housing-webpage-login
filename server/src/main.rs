@@ -1,17 +1,20 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
+
+mod database;
+mod routers;
 
 use std::env;
 
 use dotenv::dotenv;
-use rocket::{serde::json::Json, State};
-use rocket_db_pools::{sqlx::{self, FromRow, PgPool}};
+use rocket::{State, serde::json::Json};
+use rocket_db_pools::sqlx::{self, FromRow, PgPool};
 use serde::{Deserialize, Serialize};
 
 type DbPool = PgPool;
 
-
 #[get("/")]
-fn index() -> &'static str{
+fn index() -> &'static str {
     "Hello world!"
 }
 
@@ -40,5 +43,5 @@ async fn rocket() -> _ {
         .expect("Failed to create database pool");
     rocket::build()
         .manage(pool)
-        .mount("/", routes![index, db])
+        .mount("/", routes![index, db, routers::users::users])
 }
