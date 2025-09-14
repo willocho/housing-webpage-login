@@ -7,15 +7,46 @@ mod routers;
 use std::{env, path::{Path, PathBuf}};
 
 use dotenv::dotenv;
-use rocket::{fs::NamedFile, serde::json::Json, State};
+use rocket::{fairing::{Fairing, Info, Kind}, fs::NamedFile, http::{Header, Status}, serde::json::Json, Request, Response, State};
 use rocket_db_pools::sqlx::{self, FromRow, PgPool};
 use serde::{Deserialize, Serialize};
+
+pub struct CORS;
+
+#[rocket::async_trait]
+impl Fairing for CORS {
+    fn info(&self) -> Info {
+        Info {
+            name: "Add CORS headers to responses",
+            kind: Kind::Response
+        }
+    }
+
+    async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
+        let origin = request.headers().get_one("Origin");
+        
+        if let Some(origin) = origin {
+            if origin.starts_with("http://localhost") || origin.starts_with("https://localhost") {
+                response.set_header(Header::new("Access-Control-Allow-Origin", origin));
+            }
+        }
+        
+        response.set_header(Header::new("Access-Control-Allow-Methods", "POST, GET, PATCH, PUT, OPTIONS"));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
+}
 
 type DbPool = PgPool;
 
 #[get("/")]
 async fn index() -> Option<NamedFile> {
     NamedFile::open(Path::new("../webpage/dist/index.html")).await.ok()
+}
+
+#[options("/<_..>")]
+fn all_options() -> Status {
+    Status::Ok
 }
 
 
@@ -48,6 +79,7 @@ async fn rocket() -> _ {
         .await
         .expect("Failed to create database pool");
     rocket::build()
+        .attach(CORS)
         .manage(pool)
-        .mount("/", routes![index, files, db, routers::users::users, routers::users::try_login])
+        .mount("/", routes![index, files, all_options, db, routers::users::users, routers::users::try_login, routers::users::signup])
 }
