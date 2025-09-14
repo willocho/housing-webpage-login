@@ -4,12 +4,31 @@ import './App.css'
 function App() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [isSignup, setIsSignup] = useState(false)
+  const [message, setMessage] = useState("")
+
+  const isValidEmail = (email: string): boolean => {
+    return email.includes('@') &&
+           email.split('@').filter(part => part.length > 0).length === 2 &&
+           email.split('@')[1].includes('.') &&
+           email.split('@')[1].length > 3 &&
+           !email.startsWith('@') &&
+           !email.endsWith('@') &&
+           email.length > 5
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+    setMessage("")
+
+    if (isSignup && !isValidEmail(username)) {
+      setMessage("Please enter a valid email address")
+      return
+    }
+
     try {
-      const response = await fetch('http://localhost:8000/login', {
+      const endpoint = isSignup ? '/signup' : '/login'
+      const response = await fetch(`http://localhost:8000${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -19,14 +38,27 @@ function App() {
           password
         })
       })
-      
+
       if (response.ok) {
-        console.log('Login successful')
+        setMessage(isSignup ? 'Signup successful!' : 'Login successful!')
+        if (isSignup) {
+          setUsername("")
+          setPassword("")
+        }
       } else {
-        console.log('Login failed')
+        if (response.status === 400) {
+          setMessage("Invalid email format")
+        } else if (response.status === 409) {
+          setMessage("User already exists")
+        } else if (response.status === 401) {
+          setMessage("Invalid credentials")
+        } else {
+          setMessage(isSignup ? 'Signup failed' : 'Login failed')
+        }
       }
     } catch (error) {
-      console.error('Error during login:', error)
+      console.error(`Error during ${isSignup ? 'signup' : 'login'}:`, error)
+      setMessage("Network error occurred")
     }
   }
 
@@ -34,11 +66,25 @@ function App() {
     <>
       <div>
         <h1>Welcome to the Madison Housing Dataset</h1>
+        <div>
+          <button
+            onClick={() => setIsSignup(false)}
+            style={{ marginRight: '10px', backgroundColor: !isSignup ? '#007bff' : '#ccc' }}
+          >
+            Login
+          </button>
+          <button
+            onClick={() => setIsSignup(true)}
+            style={{ backgroundColor: isSignup ? '#007bff' : '#ccc' }}
+          >
+            Sign Up
+          </button>
+        </div>
         <form onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="username">Username:</label>
+            <label htmlFor="username">Email:</label>
             <input
-              type="text"
+              type="email"
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -55,8 +101,9 @@ function App() {
               required
             />
           </div>
-          <button type="submit">Login</button>
+          <button type="submit">{isSignup ? 'Sign Up' : 'Login'}</button>
         </form>
+        {message && <div style={{ marginTop: '10px', color: message.includes('successful') ? 'green' : 'red' }}>{message}</div>}
       </div>
     </>
   )

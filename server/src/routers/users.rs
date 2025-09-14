@@ -20,6 +20,27 @@ pub struct LoginData {
     password: String,
 }
 
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct SignupData {
+    username: String,
+    password: String,
+}
+
+fn is_valid_email(email: &str) -> bool {
+    email.contains('@') &&
+    email.chars().filter(|&c| c == '@').count() == 1 &&
+    email.split('@').nth(1).map_or(false, |domain|
+        domain.contains('.') &&
+        domain.len() > 3 &&
+        !domain.starts_with('.') &&
+        !domain.ends_with('.')
+    ) &&
+    !email.starts_with('@') &&
+    !email.ends_with('@') &&
+    email.len() > 5
+}
+
 #[post("/login", data = "<login_data>")]
 pub async fn try_login(login_data: Json<LoginData>, pool: &State<DbPool>) -> Result<(), Status> {
     let password_query = sqlx::query_as!(User, "Select * from users where username = $1", &login_data.username)
@@ -46,5 +67,49 @@ pub async fn try_login(login_data: Json<LoginData>, pool: &State<DbPool>) -> Res
             eprintln!("Error: {e}");
             Err(Status::ServiceUnavailable)
         },
+    }
+}
+
+#[post("/signup", data = "<signup_data>")]
+pub async fn signup(signup_data: Json<SignupData>, pool: &State<DbPool>) -> Result<Json<User>, Status> {
+    if !is_valid_email(&signup_data.username) {
+        return Err(Status::BadRequest);
+    }
+
+    let existing_user = sqlx::query_as!(User, "Select * from users where username = $1", &signup_data.username)
+        .fetch_optional(pool.inner()).await;
+
+    match existing_user {
+        Ok(Some(_)) => return Err(Status::Conflict),
+        Ok(None) => {},
+        Err(_) => return Err(Status::ServiceUnavailable),
+    }
+
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    let password_hash = argon2.hash_password(signup_data.password.as_bytes(), &salt)
+        .map_err(|_| Status::InternalServerError)?
+        .to_string();
+
+    let insert_result = sqlx::query!(
+        "INSERT INTO users (username, password) VALUES ($1, $2)",
+        &signup_data.username,
+        &password_hash
+    )
+    .execute(pool.inner())
+    .await;
+
+    match insert_result {
+        Ok(_) => {
+            let new_user = User {
+                username: signup_data.username.clone(),
+                password: password_hash.into(),
+            };
+            Ok(Json(new_user))
+        },
+        Err(e) => {
+            eprintln!("Error inserting user: {e}");
+            Err(Status::ServiceUnavailable)
+        }
     }
 }
