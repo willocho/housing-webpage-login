@@ -4,18 +4,24 @@ extern crate rocket;
 mod database;
 mod routers;
 
-use std::env;
+use std::{env, path::{Path, PathBuf}};
 
 use dotenv::dotenv;
-use rocket::{State, serde::json::Json};
+use rocket::{fs::NamedFile, serde::json::Json, State};
 use rocket_db_pools::sqlx::{self, FromRow, PgPool};
 use serde::{Deserialize, Serialize};
 
 type DbPool = PgPool;
 
 #[get("/")]
-fn index() -> &'static str {
-    "Hello world!"
+async fn index() -> Option<NamedFile> {
+    NamedFile::open(Path::new("../webpage/dist/index.html")).await.ok()
+}
+
+
+#[get("/<file..>")]
+async fn files(file: PathBuf) -> Option<NamedFile> {
+    NamedFile::open(Path::new("../webpage/dist/").join(file)).await.ok()
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -43,5 +49,5 @@ async fn rocket() -> _ {
         .expect("Failed to create database pool");
     rocket::build()
         .manage(pool)
-        .mount("/", routes![index, db, routers::users::users])
+        .mount("/", routes![index, files, db, routers::users::users, routers::users::try_login])
 }

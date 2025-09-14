@@ -7,13 +7,20 @@ use sqlx::prelude::Type;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[sqlx(transparent)]
-struct HashedPassword(String);
+pub struct HashedPassword(String);
+
+impl From<String> for HashedPassword {
+    fn from(hash: String) -> Self {
+        Self(hash)
+    }
+}
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct User {
-    username: String,
-    password: HashedPassword,
+    pub username: String,
+    #[serde(skip_serializing)]
+    pub password: HashedPassword,
 }
 
 impl User {
