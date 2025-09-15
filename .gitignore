@@ -25,3 +25,4 @@ server/target
 
 server/target
 server/.env
+node_modules
