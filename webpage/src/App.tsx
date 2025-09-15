@@ -1,11 +1,14 @@
 import { useState } from 'react'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import './App.css'
+import Home from './Home'
 
-function App() {
+function LoginForm() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isSignup, setIsSignup] = useState(false)
   const [message, setMessage] = useState("")
+  const navigate = useNavigate()
 
   const isValidEmail = (email: string): boolean => {
     return email.includes('@') &&
@@ -28,7 +31,7 @@ function App() {
 
     try {
       const endpoint = isSignup ? '/signup' : '/login'
-      const response = await fetch(`http://localhost:8000${endpoint}`, {
+      const response = await fetch(`/api${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,6 +47,8 @@ function App() {
         if (isSignup) {
           setUsername("")
           setPassword("")
+        } else {
+          navigate('/home')
         }
       } else {
         if (response.status === 400) {
@@ -106,6 +111,15 @@ function App() {
         {message && <div style={{ marginTop: '10px', color: message.includes('successful') ? 'green' : 'red' }}>{message}</div>}
       </div>
     </>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LoginForm />} />
+      <Route path="/home" element={<Home />} />
+    </Routes>
   )
 }
 

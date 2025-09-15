@@ -1,6 +1,7 @@
-use rocket::{http::Status, serde::json::Json, State};
+use rocket::{http::{Cookie, CookieJar, SameSite, Status}, serde::json::Json, State};
 use serde::Deserialize;
 use argon2::{Argon2, password_hash::{rand_core::OsRng, PasswordHasher, SaltString}};
+use uuid::Uuid;
 
 use crate::{DbPool, database::users::User};
 
@@ -42,7 +43,7 @@ fn is_valid_email(email: &str) -> bool {
 }
 
 #[post("/login", data = "<login_data>")]
-pub async fn try_login(login_data: Json<LoginData>, pool: &State<DbPool>) -> Result<(), Status> {
+pub async fn try_login(login_data: Json<LoginData>, pool: &State<DbPool>, cookies: &CookieJar<'_>) -> Result<(), Status> {
     let password_query = sqlx::query_as!(User, "Select * from users where username = $1", &login_data.username)
         .fetch_optional(pool.inner()).await;
     match password_query {
@@ -50,7 +51,15 @@ pub async fn try_login(login_data: Json<LoginData>, pool: &State<DbPool>) -> Res
             match user_option {
                 Some(user) => {
                     match user.verify_password(&login_data.password){
-                        Ok(()) => Ok(()),
+                        Ok(()) => {
+                            let session_id = Uuid::new_v4().to_string();
+                            let mut cookie = Cookie::new("session_id", session_id);
+                            cookie.set_same_site(SameSite::Lax);
+                            cookie.set_http_only(true);
+                            cookie.set_path("/");
+                            cookies.add(cookie);
+                            Ok(())
+                        },
                         Err(e) => {
                             eprintln!("Error authorizing password: {e}");
                             Err(Status::Unauthorized)
