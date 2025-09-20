@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use argon2::{
     Argon2,
     password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
@@ -10,16 +12,8 @@ use rocket::{
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{DbPool, database::users::User};
+use crate::{database::users::{User, UserResponse}, DbPool};
 
-#[get("/users")]
-pub async fn users(pool: &State<DbPool>) -> Json<Vec<User>> {
-    let users = sqlx::query_as::<_, User>("select * from users")
-        .fetch_all(pool.inner())
-        .await
-        .unwrap_or_else(|_| vec![]);
-    Json(users)
-}
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -49,7 +43,17 @@ fn is_valid_email(email: &str) -> bool {
         && email.len() > 5
 }
 
-#[post("/login", data = "<login_data>")]
+#[get("/users")]
+pub async fn users(pool: &State<DbPool>) -> Json<Vec<UserResponse>> {
+    let users = sqlx::query_as::<_, User>("select * from users")
+        .fetch_all(pool.inner())
+        .await
+        .unwrap_or_else(|_| vec![]);
+    Json(users.iter().map(|u| u.into()).collect())
+}
+
+
+#[post("/api/login", data = "<login_data>")]
 pub async fn try_login(
     login_data: Json<LoginData>,
     pool: &State<DbPool>,
@@ -91,14 +95,14 @@ pub async fn try_login(
     }
 }
 
-#[post("/signup", data = "<signup_data>")]
+#[post("/api/signup", data = "<signup_data>")]
 pub async fn signup(
     signup_data: Json<SignupData>,
     pool: &State<DbPool>,
-) -> Result<Json<User>, Status> {
-    if !is_valid_email(&signup_data.username) {
+) -> Result<Json<UserResponse>, Status> {
+    let _var_name = if !is_valid_email(&signup_data.username) {
         return Err(Status::BadRequest);
-    }
+    };
 
     let existing_user = sqlx::query_as!(
         User,
@@ -114,26 +118,12 @@ pub async fn signup(
         Err(_) => return Err(Status::ServiceUnavailable),
     }
 
-    let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
-    let password_hash = argon2
-        .hash_password(signup_data.password.as_bytes(), &salt)
-        .map_err(|_| Status::InternalServerError)?
-        .to_string();
-
-    let insert_result = sqlx::query!(
-        "INSERT INTO users (username, password) VALUES ($1, $2)",
-        &signup_data.username,
-        &password_hash
-    )
-    .execute(pool.inner())
-    .await;
+    let insert_result = insert_user_into_db(pool.inner(), &signup_data).await;
 
     match insert_result {
         Ok(_) => {
-            let new_user = User {
+            let new_user = UserResponse {
                 username: signup_data.username.clone(),
-                password: password_hash.into(),
             };
             Ok(Json(new_user))
         }
@@ -142,4 +132,51 @@ pub async fn signup(
             Err(Status::ServiceUnavailable)
         }
     }
+}
+
+async fn insert_user_into_db(
+    pool: &DbPool,
+    signup_data: &SignupData,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    perform_database_operations(pool, &signup_data).await
+}
+
+fn create_password_hash(signup_data: &SignupData) -> Result<String, Box<dyn Error + Send + Sync>> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    let password_hash = argon2
+        .hash_password(signup_data.password.as_bytes(), &salt)?
+        .to_string();
+    Ok(password_hash)
+}
+
+async fn perform_database_operations(
+    pool: &DbPool,
+    signup_data: &SignupData,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let password_hash = create_password_hash(&signup_data)?;
+    sqlx::query!(
+        "INSERT INTO users (username, password) VALUES ($1, $2)",
+        &signup_data.username,
+        &password_hash
+    )
+    .execute(pool)
+    .await?;
+
+    // You can only use query! with DDL
+    sqlx::raw_sql(&format!(
+        "CREATE USER {} WITH PASSWORD '{}';",
+        &signup_data.username, &signup_data.password
+    ))
+    .execute(pool)
+    .await?;
+
+    sqlx::raw_sql(&format!(
+        "GRANT housing_reader TO {};",
+        &signup_data.username
+    ))
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }

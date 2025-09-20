@@ -15,11 +15,9 @@ impl From<String> for HashedPassword {
     }
 }
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-#[serde(crate = "rocket::serde")]
+#[derive(Debug, Clone, FromRow)]
 pub struct User {
     pub username: String,
-    #[serde(skip_serializing)]
     pub password: HashedPassword,
 }
 
@@ -32,5 +30,28 @@ impl User {
         let argon2 = Argon2::default();
         argon2.verify_password(&password.as_bytes(), &parsed_hash)?;
         Ok(())
+    }
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct UserResponse {
+    pub username: String,
+}
+
+impl From<User> for UserResponse {
+    fn from(value: User) -> Self {
+        UserResponse {
+            username: value.username
+        }
+    }
+}
+
+impl From<&User> for UserResponse {
+    fn from(value: &User) -> Self {
+        UserResponse {
+            username: value.username.clone()
+        }
     }
 }
