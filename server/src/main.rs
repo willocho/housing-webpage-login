@@ -46,12 +46,14 @@ async fn index() -> Option<NamedFile> {
     NamedFile::open(Path::new("../webpage/dist/index.html")).await.ok()
 }
 
+//We need to return OPTIONS in order for CORS to work
 #[options("/<_..>")]
 fn all_options() -> Status {
     Status::Ok
 }
 
-
+//If we get random file requests then they should be from the webpages dist directory for
+//js/css/etc...
 #[get("/<file..>")]
 async fn files(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("../webpage/dist/").join(file)).await.ok()
