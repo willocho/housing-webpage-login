@@ -7,6 +7,7 @@ mod routers;
 use std::{env, path::{Path, PathBuf}};
 
 use dotenv::dotenv;
+use macros::redirect_to_login;
 use rocket::{fairing::{Fairing, Info, Kind}, fs::NamedFile, http::{Header, Status}, serde::json::Json, Request, Response, State};
 use rocket_db_pools::sqlx::{self, FromRow, PgPool};
 use serde::{Deserialize, Serialize};
@@ -40,6 +41,7 @@ impl Fairing for CORS {
 type DbPool = PgPool;
 
 #[get("/")]
+#[redirect_to_login]
 async fn index() -> Option<NamedFile> {
     NamedFile::open(Path::new("../webpage/dist/index.html")).await.ok()
 }

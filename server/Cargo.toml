@@ -3,7 +3,11 @@ name = "housing-webpage-login"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+members = ['.', 'macros']
+
 [dependencies]
+macros = { path = 'macros' }
 argon2 = { version = "0.5.3", features = ["std"] }
 dotenv = "0.15.0"
 rocket = { version = "0.5.1", features = ["json", "serde_json"] }

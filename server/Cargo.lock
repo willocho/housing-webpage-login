@@ -753,6 +753,7 @@ version = "0.1.0"
 dependencies = [
  "argon2",
  "dotenv",
+ "macros",
  "rocket",
  "rocket_db_pools",
  "serde",
@@ -1100,6 +1101,10 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
 ]
+
+[[package]]
+name = "macros"
+version = "0.1.0"
 
 [[package]]
 name = "matchers"
