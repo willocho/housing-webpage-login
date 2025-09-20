@@ -4,4 +4,3 @@ use proc_macro::TokenStream;
 pub fn redirect_to_login(_attr: TokenStream, item: TokenStream) -> TokenStream {
     return item;
 }
-

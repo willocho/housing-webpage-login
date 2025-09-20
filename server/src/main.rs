@@ -4,11 +4,20 @@ extern crate rocket;
 mod database;
 mod routers;
 
-use std::{env, path::{Path, PathBuf}};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
 use dotenv::dotenv;
 use macros::redirect_to_login;
-use rocket::{fairing::{Fairing, Info, Kind}, fs::NamedFile, http::{Header, Status}, serde::json::Json, Request, Response, State};
+use rocket::{
+    Request, Response, State,
+    fairing::{Fairing, Info, Kind},
+    fs::NamedFile,
+    http::{Header, Status},
+    serde::json::Json,
+};
 use rocket_db_pools::sqlx::{self, FromRow, PgPool};
 use serde::{Deserialize, Serialize};
 
@@ -19,20 +28,23 @@ impl Fairing for CORS {
     fn info(&self) -> Info {
         Info {
             name: "Add CORS headers to responses",
-            kind: Kind::Response
+            kind: Kind::Response,
         }
     }
 
     async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
         let origin = request.headers().get_one("Origin");
-        
+
         if let Some(origin) = origin {
             if origin.starts_with("http://localhost") || origin.starts_with("https://localhost") {
                 response.set_header(Header::new("Access-Control-Allow-Origin", origin));
             }
         }
-        
-        response.set_header(Header::new("Access-Control-Allow-Methods", "POST, GET, PATCH, PUT, OPTIONS"));
+
+        response.set_header(Header::new(
+            "Access-Control-Allow-Methods",
+            "POST, GET, PATCH, PUT, OPTIONS",
+        ));
         response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
         response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
     }
@@ -43,7 +55,9 @@ type DbPool = PgPool;
 #[get("/")]
 #[redirect_to_login]
 async fn index() -> Option<NamedFile> {
-    NamedFile::open(Path::new("../webpage/dist/index.html")).await.ok()
+    NamedFile::open(Path::new("../webpage/dist/index.html"))
+        .await
+        .ok()
 }
 
 //We need to return OPTIONS in order for CORS to work
@@ -56,7 +70,9 @@ fn all_options() -> Status {
 //js/css/etc...
 #[get("/<file..>")]
 async fn files(file: PathBuf) -> Option<NamedFile> {
-    NamedFile::open(Path::new("../webpage/dist/").join(file)).await.ok()
+    NamedFile::open(Path::new("../webpage/dist/").join(file))
+        .await
+        .ok()
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -82,8 +98,16 @@ async fn rocket() -> _ {
     let pool = PgPool::connect(&database_url)
         .await
         .expect("Failed to create database pool");
-    rocket::build()
-        .attach(CORS)
-        .manage(pool)
-        .mount("/", routes![index, files, all_options, db, routers::users::users, routers::users::try_login, routers::users::signup])
+    rocket::build().attach(CORS).manage(pool).mount(
+        "/",
+        routes![
+            index,
+            files,
+            all_options,
+            db,
+            routers::users::users,
+            routers::users::try_login,
+            routers::users::signup
+        ],
+    )
 }
