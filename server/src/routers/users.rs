@@ -38,13 +38,7 @@ pub async fn try_login(
     pool: &State<DbPool>,
     cookies: &CookieJar<'_>,
 ) -> Result<(), Status> {
-    let password_query = sqlx::query_as!(
-        User,
-        "Select * from users where username = $1",
-        &login_data.username
-    )
-    .fetch_optional(pool.inner())
-    .await;
+    let password_query = User::get_user(&login_data.username, &pool.inner()).await;
     match password_query {
         Ok(user_option) => match user_option {
             Some(user) => match user.verify_password(&login_data.password) {
@@ -83,13 +77,7 @@ pub async fn signup(
         return Err(Status::BadRequest);
     };
 
-    let existing_user = sqlx::query_as!(
-        User,
-        "Select * from users where username = $1",
-        &signup_data.username
-    )
-    .fetch_optional(pool.inner())
-    .await;
+    let existing_user = User::get_user(&signup_data.username, &pool.inner()).await;
 
     match existing_user {
         Ok(Some(_)) => return Err(Status::Conflict),

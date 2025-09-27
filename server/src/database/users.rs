@@ -5,6 +5,8 @@ use rocket_db_pools::sqlx::FromRow;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::Type;
 
+use crate::DbPool;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[sqlx(transparent)]
 pub struct HashedPassword(String);
@@ -30,6 +32,18 @@ impl User {
         let argon2 = Argon2::default();
         argon2.verify_password(&password.as_bytes(), &parsed_hash)?;
         Ok(())
+    }
+
+    pub async fn get_user(username: &String, pool: &DbPool) -> Result<Option<User>, Box<dyn Error>> {
+
+        sqlx::query_as!(
+            User,
+            "Select * from users where username = $1",
+            &username
+        )
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| e.into())
     }
 }
 
