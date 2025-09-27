@@ -34,13 +34,11 @@ impl User {
         Ok(())
     }
 
-    pub async fn get_user(username: &String, pool: &DbPool) -> Result<Option<User>, Box<dyn Error>> {
-
-        sqlx::query_as!(
-            User,
-            "Select * from users where username = $1",
-            &username
-        )
+    pub async fn get_user(
+        username: &String,
+        pool: &DbPool,
+    ) -> Result<Option<User>, Box<dyn Error>> {
+        sqlx::query_as!(User, "Select * from users where username = $1", &username)
             .fetch_optional(pool)
             .await
             .map_err(|e| e.into())

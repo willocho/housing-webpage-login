@@ -5,10 +5,7 @@ use argon2::{
     password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
 };
 
-use crate::{
-    DbPool,
-    models::login_signup::SignupData,
-};
+use crate::{DbPool, models::login_signup::SignupData};
 
 pub async fn insert_user_into_db(
     pool: &DbPool,

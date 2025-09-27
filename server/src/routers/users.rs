@@ -6,7 +6,10 @@ use rocket::{
 use uuid::Uuid;
 
 use crate::{
-    database::users::{User, UserResponse}, models::login_signup::{LoginData, SignupData}, services::users::insert_user_into_db, DbPool
+    DbPool,
+    database::users::{User, UserResponse},
+    models::login_signup::{LoginData, SignupData},
+    services::users::insert_user_into_db,
 };
 
 fn is_valid_email(email: &str) -> bool {
