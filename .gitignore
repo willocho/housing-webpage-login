@@ -26,3 +26,4 @@ server/target
 server/target
 server/.env
 node_modules
+server/.DS_Store
