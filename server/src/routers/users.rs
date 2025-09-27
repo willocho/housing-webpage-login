@@ -1,33 +1,13 @@
-use std::error::Error;
-
-use argon2::{
-    Argon2,
-    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
-};
 use rocket::{
     State,
     http::{Cookie, CookieJar, SameSite, Status},
     serde::json::Json,
 };
-use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::users::{User, UserResponse}, DbPool};
-
-
-#[derive(Deserialize)]
-#[serde(crate = "rocket::serde")]
-pub struct LoginData {
-    username: String,
-    password: String,
-}
-
-#[derive(Deserialize)]
-#[serde(crate = "rocket::serde")]
-pub struct SignupData {
-    username: String,
-    password: String,
-}
+use crate::{
+    database::users::{User, UserResponse}, models::login_signup::{LoginData, SignupData}, services::users::insert_user_into_db, DbPool
+};
 
 fn is_valid_email(email: &str) -> bool {
     email.contains('@')
@@ -51,7 +31,6 @@ pub async fn users(pool: &State<DbPool>) -> Json<Vec<UserResponse>> {
         .unwrap_or_else(|_| vec![]);
     Json(users.iter().map(|u| u.into()).collect())
 }
-
 
 #[post("/api/login", data = "<login_data>")]
 pub async fn try_login(
@@ -132,51 +111,4 @@ pub async fn signup(
             Err(Status::ServiceUnavailable)
         }
     }
-}
-
-async fn insert_user_into_db(
-    pool: &DbPool,
-    signup_data: &SignupData,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
-    perform_database_operations(pool, &signup_data).await
-}
-
-fn create_password_hash(signup_data: &SignupData) -> Result<String, Box<dyn Error + Send + Sync>> {
-    let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
-    let password_hash = argon2
-        .hash_password(signup_data.password.as_bytes(), &salt)?
-        .to_string();
-    Ok(password_hash)
-}
-
-async fn perform_database_operations(
-    pool: &DbPool,
-    signup_data: &SignupData,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let password_hash = create_password_hash(&signup_data)?;
-    sqlx::query!(
-        "INSERT INTO users (username, password) VALUES ($1, $2)",
-        &signup_data.username,
-        &password_hash
-    )
-    .execute(pool)
-    .await?;
-
-    // You can only use query! with DDL
-    sqlx::raw_sql(&format!(
-        "CREATE USER {} WITH PASSWORD '{}';",
-        &signup_data.username, &signup_data.password
-    ))
-    .execute(pool)
-    .await?;
-
-    sqlx::raw_sql(&format!(
-        "GRANT housing_reader TO {};",
-        &signup_data.username
-    ))
-    .execute(pool)
-    .await?;
-
-    Ok(())
 }

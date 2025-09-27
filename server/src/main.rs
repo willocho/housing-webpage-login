@@ -2,7 +2,9 @@
 extern crate rocket;
 
 mod database;
+mod models;
 mod routers;
+mod services;
 
 use std::{
     env,

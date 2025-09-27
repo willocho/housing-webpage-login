@@ -33,7 +33,6 @@ impl User {
     }
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct UserResponse {
@@ -43,7 +42,7 @@ pub struct UserResponse {
 impl From<User> for UserResponse {
     fn from(value: User) -> Self {
         UserResponse {
-            username: value.username
+            username: value.username,
         }
     }
 }
@@ -51,7 +50,7 @@ impl From<User> for UserResponse {
 impl From<&User> for UserResponse {
     fn from(value: &User) -> Self {
         UserResponse {
-            username: value.username.clone()
+            username: value.username.clone(),
         }
     }
 }
