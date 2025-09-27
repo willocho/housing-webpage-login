@@ -37,7 +37,7 @@ impl User {
     pub async fn get_user(
         username: &String,
         pool: &DbPool,
-    ) -> Result<Option<User>, Box<dyn Error>> {
+    ) -> Result<Option<User>, Box<dyn Error + 'static + Sync + Send>> {
         sqlx::query_as!(User, "Select * from users where username = $1", &username)
             .fetch_optional(pool)
             .await
