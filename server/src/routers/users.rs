@@ -80,7 +80,7 @@ pub async fn signup(
         return Err(Status::BadRequest);
     };
 
-    let existing_user = User::get_user(&signup_data.username, &pool.inner()).await;
+    let existing_user = User::get_user(&signup_data.username, &pool).await;
 
     match existing_user {
         Ok(Some(_)) => return Err(Status::Conflict),
@@ -88,7 +88,7 @@ pub async fn signup(
         Err(_) => return Err(Status::ServiceUnavailable),
     }
 
-    let insert_result = insert_user_into_db(pool.inner(), &signup_data).await;
+    let insert_result = insert_user_into_db(&signup_data, &pool).await;
 
     match insert_result {
         Ok(_) => {

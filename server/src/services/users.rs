@@ -8,8 +8,8 @@ use argon2::{
 use crate::{DbPool, models::login_signup::SignupData};
 
 pub async fn insert_user_into_db(
-    pool: &DbPool,
     signup_data: &SignupData,
+    pool: &DbPool,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     perform_database_operations(pool, &signup_data).await
 }
