@@ -7,11 +7,10 @@ mod routers;
 mod services;
 
 use std::{
-    env, fs::OpenOptions, path::{Path, PathBuf}
+    env, path::{Path, PathBuf}
 };
 
 use dotenv::dotenv;
-use env_logger::Builder;
 use macros::redirect_to_login;
 use rocket::{
     Request, Response, State,
@@ -22,6 +21,9 @@ use rocket::{
 };
 use rocket_db_pools::sqlx::{self, FromRow, PgPool};
 use serde::{Deserialize, Serialize};
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, fmt, EnvFilter};
+
 
 pub struct CORS;
 
@@ -101,16 +103,29 @@ async fn rocket() -> _ {
         .await
         .expect("Failed to create database pool");
 
-    let target = Box::new(
-        OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("rocket.log")
-            .expect("Failed to open log file")
+    // File appender with daily rotation
+    let file_appender = RollingFileAppender::new(
+        Rotation::DAILY,
+        "logs",      // directory
+        "rocket.log" // file prefix
     );
 
-    Builder::from_default_env()
-        .target(env_logger::Target::Pipe(target))
+    // Create a layer for file output
+    let file_layer = fmt::layer()
+        .with_writer(file_appender)
+        .with_ansi(false); // Disable colors in file
+
+    // Create a layer for stdout
+    let stdout_layer = fmt::layer()
+        .with_writer(std::io::stdout);
+
+    // Combine both layers
+    tracing_subscriber::registry()
+        .with(EnvFilter::new(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "rocket=normal,info".into())
+        ))
+        .with(file_layer)
+        .with(stdout_layer)
         .init();
 
     rocket::build().attach(CORS).manage(pool).mount(
