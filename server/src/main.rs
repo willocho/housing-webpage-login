@@ -7,11 +7,11 @@ mod routers;
 mod services;
 
 use std::{
-    env,
-    path::{Path, PathBuf},
+    env, fs::OpenOptions, path::{Path, PathBuf}
 };
 
 use dotenv::dotenv;
+use env_logger::Builder;
 use macros::redirect_to_login;
 use rocket::{
     Request, Response, State,
@@ -100,6 +100,19 @@ async fn rocket() -> _ {
     let pool = PgPool::connect(&database_url)
         .await
         .expect("Failed to create database pool");
+
+    let target = Box::new(
+        OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("rocket.log")
+            .expect("Failed to open log file")
+    );
+
+    Builder::from_default_env()
+        .target(env_logger::Target::Pipe(target))
+        .init();
+
     rocket::build().attach(CORS).manage(pool).mount(
         "/",
         routes![
