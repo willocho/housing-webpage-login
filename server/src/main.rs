@@ -97,7 +97,7 @@ async fn db(pool: &State<DbPool>) -> Json<Vec<Zoning>> {
 
 #[launch]
 async fn rocket() -> _ {
-    dotenv().ok();
+    dotenv().expect("No dotenv found");
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
     let pool = PgPool::connect(&database_url)
         .await
