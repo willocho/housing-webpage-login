@@ -11,7 +11,7 @@ pub async fn insert_user_into_db(
     signup_data: &SignupData,
     pool: &DbPool,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    perform_database_operations(pool, &signup_data).await
+    insert_user_db_operations(pool, &signup_data).await
 }
 
 fn create_password_hash(signup_data: &SignupData) -> Result<String, Box<dyn Error + Send + Sync>> {
@@ -23,7 +23,7 @@ fn create_password_hash(signup_data: &SignupData) -> Result<String, Box<dyn Erro
     Ok(password_hash)
 }
 
-async fn perform_database_operations(
+async fn insert_user_db_operations(
     pool: &DbPool,
     signup_data: &SignupData,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
