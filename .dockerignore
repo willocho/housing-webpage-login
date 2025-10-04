@@ -1,0 +1,37 @@
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+CLAUDE.md
+
+# Node modules (will be installed in container)
+node_modules/
+webpage/node_modules/
+
+# Build artifacts
+server/target/
+webpage/dist/
+
+# Development files
+.env
+.env.local
+
+# Logs
+*.log
+server/logs/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
