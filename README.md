@@ -5,7 +5,7 @@ This application consists of a simple web app and server. The server is written 
 ## Setting Up the Connection to the Postgres Database
 Before you are able to run the server, you will need to create a `.env` file in the server directory with the environment variable `DATABASE_URL` set to a valid postgres connection string using your username and password.
 
-An example: `DATABASE_URL='postgresql://<your username>:<your password>@madison-data.house:5432`
+An example: `DATABASE_URL='postgresql://<your username>:<your password>@madison-data.house:5432/postgres`
 
 ## Client Commands
 
